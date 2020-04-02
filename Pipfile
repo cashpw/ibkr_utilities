@@ -9,6 +9,7 @@ verify_ssl = true
 ib-insync = "*"
 dataclasses = "*"
 pandas = "*"
+eventkit = "*"
 
 [requires]
 python_version = "3.6"
