@@ -2,6 +2,7 @@ from get_option_chain import get_option_chain
 from ib_insync import IB, Stock
 import pandas as pd
 from typing import List
+import argparse
 
 def calc_option_contract_profit(
     asks: List[float],
@@ -13,20 +14,29 @@ def calc_option_contract_profit(
     right_is_call = rights.apply(lambda right: 1 if right == "C" or right == "CALL" else -1)
     return ((-1.0 * asks) + (right_is_call * (future_price - strikes))) * multipliers
 
+parser = argparse.ArgumentParser(description="Calculate option chain profits.")
+parser.add_argument('symbol', type=str, help="The stock symbol (eg: GOOG) to use.")
+parser.add_argument('-e', '--expirations', metavar="YYYYMMDD", type=str, nargs="+", help="Option expiration date(s).", required=True)
+parser.add_argument('-f', '--future_prices', type=float, nargs="+", help="Future price(s) for computing profit.", required=True)
+parser.add_argument('--contract_per_price', dest="contract_per_price", type=int, default=3)
+args = parser.parse_args()
+
 pd.set_option("display.max_rows", None)
 
 ib = IB()
 ib.connect()
 
-contract = Stock("SPY", "SMART", "USD")
+contract = Stock(args.symbol, "SMART", "USD")
 ib.reqMarketDataType(1)
 ib.qualifyContracts(contract)
+[ticker] = ib.reqTickers(contract)
+current_price = ticker.marketPrice()
 
-future_prices = [240.0, 230.0, 220.0]
-expirations = ["20200417", "20200515"]
-option_chain = get_option_chain(ib, contract, expirations, strike_min=min(future_prices))
+strike_min=min(current_price * 0.9, min(args.future_prices))
+strike_max=max(current_price * 1.1, max(args.future_prices))
+option_chain = get_option_chain(ib, contract, args.expirations, strike_min=strike_min, strike_max=strike_max)
 
-for future_price in future_prices:
+for future_price in args.future_prices:
     df = option_chain.copy()
     print("\n\n")
     print(f"For: {contract.symbol} with future price of {future_price}")
@@ -38,6 +48,6 @@ for future_price in future_prices:
 
     by_expiration = df.groupby("Expiration")
     for expiration, frame in by_expiration:
-        print(frame.head(3), end="\n\n")
+        print(frame.head(args.contract_per_price), end="\n\n")
 
 ib.disconnect()
