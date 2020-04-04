@@ -1,5 +1,7 @@
+from ibkr_utilities.util.is_call import is_call
+
 def build_option_value_fn(strike_price: float, right: str, multiplier=100):
-    if right == 'P' or right == 'PUT':
-        return lambda price: 0 if price >= strike_price else ((strike_price - price) * multiplier)
+    if is_call(right):
+        return lambda underlying_price: 0 if underlying_price <= strike_price else ((underlying_price - strike_price) * multiplier)
     else:
-        return lambda price: 0 if price <= strike_price else ((price - strike_price) * multiplier)
+        return lambda underlying_price: 0 if underlying_price >= strike_price else ((strike_price - underlying_price) * multiplier)
