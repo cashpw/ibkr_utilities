@@ -8,6 +8,7 @@ def get_option_chain(
     use_delayed_data=False,
     strike_min=None,
     strike_max=None,
+    strike_modulus=None,
     rights=["P", "C"],
 ) -> pd.DataFrame:
     """
@@ -25,8 +26,13 @@ def get_option_chain(
     chain = next(c for c in chains
                  if c.tradingClass == qualified_contract.symbol
                  and c.exchange == qualified_contract.exchange)
-    strikes = [strike for strike in chain.strikes
-               if strike_min < strike < strike_max]
+    if strike_modulus:
+        strikes = [strike for strike in chain.strikes
+                if strike_min < strike < strike_max
+                and strike % strike_modulus == 0]
+    else:
+        strikes = [strike for strike in chain.strikes
+                if strike_min < strike < strike_max]
     contracts = [Option(qualified_contract.symbol, expiration, strike, right, qualified_contract.exchange, tradingClass=qualified_contract.symbol)
             for right in rights
             for expiration in expirations
